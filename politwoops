@@ -1,0 +1,75 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          politwoops
+# Required-Start:    $local_fs $network $syslog
+# Required-Stop:     $local_fs $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Capture deleted tweets application
+# Description:       Politwoops is a python application that captures tweets deleted 
+#                    by a selected list of users.
+### END INIT INFO
+
+export PYTHONPATH=/usr/src/app/politwoops-tweet-collector/lib
+DESC="Capture deleted tweets application"
+NAME=Politwoops
+DIR="/usr/src/app/politwoops-tweet-collector"
+
+PIDFILE1=/var/run/politwoops_tweets.pid
+PIDFILE2=/var/run/politwoops_worker.pid
+LOGFILE=/var/log/politwoops.log
+
+SCRIPT1="python3 ./bin/tweets-client.py --output=$LOGFILE --restart"
+SCRIPT2="python3 ./bin/politwoops-worker.py --output=$LOGFILE --restart"
+
+start() {
+  if [ -f "$PIDFILE1" ] && kill -0 $(cat "$PIDFILE1"); then
+    echo 'Politwoops already running' >&2
+    return 1
+  fi
+  echo 'Starting politwoops…' >&2
+  cd "$DIR"
+  $SCRIPT1 &
+  echo "$!"> "$PIDFILE1"
+  $SCRIPT2 &
+  echo "$!"> "$PIDFILE2"
+  echo 'Service started' >&2
+}
+
+stop() {
+  if [ ! -f "$PIDFILE1" ] || ! kill -0 $(cat "$PIDFILE1"); then
+    echo 'Politwoops not running' >&2
+    return 1
+  fi
+  echo 'Stopping service…' >&2
+  kill -15 $(cat "$PIDFILE1") && rm -f "$PIDFILE1"
+  echo 'Service stopped' >&2
+}
+
+status() {
+  if [ -f "$PIDFILE1" ] && kill -0 $(cat "$PIDFILE1"); then
+    echo 'Politwoops is running' >&2
+    return 0
+  fi
+  echo 'Politwoops is not running' >&2
+  return 1
+}
+
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  status)
+  	status
+    ;;
+  retart)
+    stop
+    start
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|status}"
+esac
+
