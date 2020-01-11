@@ -78,7 +78,7 @@ def run_with_restart(fn, max_restart=0, args=(), kwargs={}):
     restartCounter = 0
     while True:
         try:
-            return apply(fn, args, kwargs)
+            return fn()
         except AssertionError:
             raise
         except Exception as e:
